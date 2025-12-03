@@ -1,10 +1,11 @@
-FROM gradle:8-jdk17 AS build
-COPY --chown=gradle:gradle . /home/gradle/src
-WORKDIR /home/gradle/src
-RUN gradle shadowJar --no-daemon
+FROM eclipse-temurin:17-jdk AS build
+WORKDIR /app
+COPY . .
+RUN chmod +x gradlew
+RUN ./gradlew shadowJar --no-daemon
 
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre
 EXPOSE 8080
-RUN mkdir /app
-COPY --from=build /home/gradle/src/build/libs/*-all.jar /app/ninjatalk.jar
+WORKDIR /app
+COPY --from=build /app/build/libs/*-all.jar /app/ninjatalk.jar
 ENTRYPOINT ["java", "-jar", "/app/ninjatalk.jar"]
