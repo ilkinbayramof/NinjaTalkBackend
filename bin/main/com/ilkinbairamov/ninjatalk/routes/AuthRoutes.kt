@@ -29,9 +29,14 @@ fun Route.authRoutes(authService: AuthService) {
                             )
                         }
             } catch (e: Exception) {
+                e.printStackTrace()
                 call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse(error = "INVALID_REQUEST", message = "Invalid request format")
+                        ErrorResponse(
+                                error = "INVALID_REQUEST",
+                                message =
+                                        "Invalid request format: ${e.message} - ${e.cause?.message}"
+                        )
                 )
             }
         }
@@ -53,9 +58,14 @@ fun Route.authRoutes(authService: AuthService) {
                             )
                         }
             } catch (e: Exception) {
+                e.printStackTrace()
                 call.respond(
                         HttpStatusCode.BadRequest,
-                        ErrorResponse(error = "INVALID_REQUEST", message = "Invalid request format")
+                        ErrorResponse(
+                                error = "INVALID_REQUEST",
+                                message =
+                                        "Invalid request format: ${e.message} - ${e.cause?.message}"
+                        )
                 )
             }
         }
