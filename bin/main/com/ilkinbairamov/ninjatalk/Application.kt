@@ -38,7 +38,15 @@ fun Application.module() {
     val authService = AuthService(jwtService)
 
     // Install plugins
-    install(ContentNegotiation) { json() }
+    install(ContentNegotiation) {
+        json(
+                io.ktor.serialization.kotlinx.json.json {
+                    prettyPrint = true
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                }
+        )
+    }
 
     install(CORS) {
         allowMethod(HttpMethod.Options)
