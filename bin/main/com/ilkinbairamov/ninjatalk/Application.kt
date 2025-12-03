@@ -40,7 +40,7 @@ fun Application.module() {
     // Install plugins
     install(ContentNegotiation) {
         json(
-                io.ktor.serialization.kotlinx.json.json {
+                kotlinx.serialization.json.Json {
                     prettyPrint = true
                     isLenient = true
                     ignoreUnknownKeys = true
