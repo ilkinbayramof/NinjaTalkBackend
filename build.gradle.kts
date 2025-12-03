@@ -36,9 +36,17 @@ dependencies {
     // WebSockets (for real-time chat)
     implementation("io.ktor:ktor-server-websockets-jvm")
     
-    // MongoDB
-    implementation("org.litote.kmongo:kmongo:4.11.0")
-    implementation("org.litote.kmongo:kmongo-coroutine:4.11.0")
+    // PostgreSQL
+    implementation("org.postgresql:postgresql:42.7.1")
+    
+    // Exposed ORM
+    implementation("org.jetbrains.exposed:exposed-core:0.46.0")
+    implementation("org.jetbrains.exposed:exposed-dao:0.46.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.46.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:0.46.0")
+    
+    // HikariCP (Connection Pool)
+    implementation("com.zaxxer:HikariCP:5.1.0")
     
     // BCrypt for password hashing
     implementation("org.mindrot:jbcrypt:0.4")

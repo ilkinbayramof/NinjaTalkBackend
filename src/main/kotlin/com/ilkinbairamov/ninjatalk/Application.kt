@@ -1,6 +1,5 @@
 package com.ilkinbairamov.ninjatalk
 
-import com.ilkinbairamov.ninjatalk.database.MongoDatabase
 import com.ilkinbairamov.ninjatalk.routes.authRoutes
 import com.ilkinbairamov.ninjatalk.services.AuthService
 import com.ilkinbairamov.ninjatalk.services.JwtService
@@ -28,9 +27,8 @@ fun main() {
 }
 
 fun Application.module() {
-    // Initialize MongoDB
-    val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://localhost:27017"
-    MongoDatabase.init(mongoUri)
+    // Initialize PostgreSQL
+    com.ilkinbayramov.ninjatalk.database.DatabaseFactory.init()
 
     // Initialize services
     val jwtSecret = System.getenv("JWT_SECRET") ?: "your-secret-key-change-in-production"
