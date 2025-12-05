@@ -1,11 +1,17 @@
 package com.ilkinbayramov.ninjatalk
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import com.ilkinbayramov.ninjatalk.database.DatabaseFactory
 import com.ilkinbayramov.ninjatalk.routes.authRoutes
+import com.ilkinbayramov.ninjatalk.routes.userRoutes
 import com.ilkinbayramov.ninjatalk.services.AuthService
 import com.ilkinbayramov.ninjatalk.services.JwtService
+import com.ilkinbayramov.ninjatalk.services.UserService
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
@@ -24,6 +30,7 @@ fun Application.module() {
     val jwtSecret = System.getenv("JWT_SECRET") ?: "your-secret-key-change-in-production"
     val jwtService = JwtService(jwtSecret)
     val authService = AuthService(jwtService)
+    val userService = UserService()
 
     install(ContentNegotiation) {
         json()
@@ -32,10 +39,29 @@ fun Application.module() {
     install(CORS) {
         anyHost()
         allowHeader("Content-Type")
+        allowHeader("Authorization")
+    }
+
+    install(Authentication) {
+        jwt("auth-jwt") {
+            verifier(
+                JWT
+                    .require(Algorithm.HMAC256(jwtSecret))
+                    .build()
+            )
+            validate { credential ->
+                if (credential.payload.subject != null) {
+                    JWTPrincipal(credential.payload)
+                } else {
+                    null
+                }
+            }
+        }
     }
 
     routing {
         authRoutes(authService)
+        userRoutes(userService, jwtService)
         
         get("/") {
             call.respondText("NinjaTalk Backend is running!")

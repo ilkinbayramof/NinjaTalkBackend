@@ -8,6 +8,7 @@ object Users : Table() {
     val password = varchar("password", 255)
     val gender = varchar("gender", 10)
     val birthDate = varchar("birth_date", 10)
+    val bio = varchar("bio", 500).nullable()
     val createdAt = long("created_at")
 
     override val primaryKey = PrimaryKey(id)
