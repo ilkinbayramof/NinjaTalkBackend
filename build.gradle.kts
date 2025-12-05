@@ -68,5 +68,5 @@ kotlin {
 }
 
 application {
-    mainClass.set("com.ilkinbairamov.ninjatalk.ApplicationKt")
+    mainClass.set("com.ilkinbayramov.ninjatalk.ApplicationKt")
 }
