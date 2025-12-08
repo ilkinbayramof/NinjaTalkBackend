@@ -6,6 +6,7 @@ import com.ilkinbayramov.ninjatalk.database.DatabaseFactory
 import com.ilkinbayramov.ninjatalk.routes.authRoutes
 import com.ilkinbayramov.ninjatalk.routes.userRoutes
 import com.ilkinbayramov.ninjatalk.services.AuthService
+import com.ilkinbayramov.ninjatalk.services.FileService
 import com.ilkinbayramov.ninjatalk.services.JwtService
 import com.ilkinbayramov.ninjatalk.services.UserService
 import io.ktor.serialization.kotlinx.json.*
@@ -13,15 +14,17 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.io.File
 
 fun main() {
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
-        .start(wait = true)
+            .start(wait = true)
 }
 
 fun Application.module() {
@@ -31,10 +34,9 @@ fun Application.module() {
     val jwtService = JwtService(jwtSecret)
     val authService = AuthService(jwtService)
     val userService = UserService()
+    val fileService = FileService()
 
-    install(ContentNegotiation) {
-        json()
-    }
+    install(ContentNegotiation) { json() }
 
     install(CORS) {
         anyHost()
@@ -44,11 +46,7 @@ fun Application.module() {
 
     install(Authentication) {
         jwt("auth-jwt") {
-            verifier(
-                JWT
-                    .require(Algorithm.HMAC256(jwtSecret))
-                    .build()
-            )
+            verifier(JWT.require(Algorithm.HMAC256(jwtSecret)).build())
             validate { credential ->
                 if (credential.payload.subject != null) {
                     JWTPrincipal(credential.payload)
@@ -61,10 +59,11 @@ fun Application.module() {
 
     routing {
         authRoutes(authService)
-        userRoutes(userService, jwtService)
-        
-        get("/") {
-            call.respondText("NinjaTalk Backend is running!")
-        }
+        userRoutes(userService, jwtService, fileService)
+
+        // Serve static files
+        staticFiles("/uploads", File("uploads"))
+
+        get("/") { call.respondText("NinjaTalk Backend is running!") }
     }
 }

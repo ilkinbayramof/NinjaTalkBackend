@@ -8,37 +8,40 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 
 class UserService {
-    
+
     suspend fun getUserById(userId: String): User? = dbQuery {
         Users.select { Users.id eq userId }
-            .mapNotNull {
-                User(
-                    id = it[Users.id],
-                    email = it[Users.email],
-                    gender = it[Users.gender],
-                    birthDate = it[Users.birthDate],
-                    bio = it[Users.bio]
-                )
-            }
-            .singleOrNull()
+                .mapNotNull {
+                    User(
+                            id = it[Users.id],
+                            email = it[Users.email],
+                            gender = it[Users.gender],
+                            birthDate = it[Users.birthDate],
+                            bio = it[Users.bio],
+                            profileImageUrl = it[Users.profileImageUrl]
+                    )
+                }
+                .singleOrNull()
     }
-    
+
     suspend fun updateBio(userId: String, bio: String): Boolean = dbQuery {
-        Users.update({ Users.id eq userId }) {
-            it[Users.bio] = bio
-        } > 0
+        Users.update({ Users.id eq userId }) { it[Users.bio] = bio } > 0
     }
-    
+
+    suspend fun updateProfileImage(userId: String, imageUrl: String): Boolean = dbQuery {
+        Users.update({ Users.id eq userId }) { it[Users.profileImageUrl] = imageUrl } > 0
+    }
+
     suspend fun getAllUsers(): List<User> = dbQuery {
-        Users.selectAll()
-            .map {
-                User(
+        Users.selectAll().map {
+            User(
                     id = it[Users.id],
                     email = it[Users.email],
                     gender = it[Users.gender],
                     birthDate = it[Users.birthDate],
-                    bio = it[Users.bio]
-                )
-            }
+                    bio = it[Users.bio],
+                    profileImageUrl = it[Users.profileImageUrl]
+            )
+        }
     }
 }

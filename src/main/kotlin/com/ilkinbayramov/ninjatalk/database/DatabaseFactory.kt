@@ -17,7 +17,7 @@ object DatabaseFactory {
 
         val database = Database.connect(createHikariDataSource(databaseUrl, user, password))
 
-        transaction(database) { SchemaUtils.create(Users) }
+        transaction(database) { SchemaUtils.createMissingTablesAndColumns(Users) }
     }
 
     private fun createHikariDataSource(
