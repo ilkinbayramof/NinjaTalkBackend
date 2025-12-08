@@ -4,8 +4,10 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.ilkinbayramov.ninjatalk.database.DatabaseFactory
 import com.ilkinbayramov.ninjatalk.routes.authRoutes
+import com.ilkinbayramov.ninjatalk.routes.chatRoutes
 import com.ilkinbayramov.ninjatalk.routes.userRoutes
 import com.ilkinbayramov.ninjatalk.services.AuthService
+import com.ilkinbayramov.ninjatalk.services.ChatService
 import com.ilkinbayramov.ninjatalk.services.FileService
 import com.ilkinbayramov.ninjatalk.services.JwtService
 import com.ilkinbayramov.ninjatalk.services.UserService
@@ -35,6 +37,7 @@ fun Application.module() {
     val authService = AuthService(jwtService)
     val userService = UserService()
     val fileService = FileService()
+    val chatService = ChatService()
 
     install(ContentNegotiation) { json() }
 
@@ -60,6 +63,7 @@ fun Application.module() {
     routing {
         authRoutes(authService)
         userRoutes(userService, jwtService, fileService)
+        chatRoutes(chatService)
 
         // Serve static files
         staticFiles("/uploads", File("uploads"))
