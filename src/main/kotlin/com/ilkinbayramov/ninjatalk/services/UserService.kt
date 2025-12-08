@@ -44,4 +44,29 @@ class UserService {
             )
         }
     }
+
+    suspend fun changePassword(
+            userId: String,
+            currentPassword: String,
+            newPassword: String
+    ): Boolean = dbQuery {
+        // Get user's current password hash
+        val user = Users.select { Users.id eq userId }.singleOrNull() ?: return@dbQuery false
+
+        val storedPasswordHash = user[Users.password]
+
+        // Verify current password using BCrypt
+        if (!com.ilkinbayramov.ninjatalk.utils.PasswordHasher.checkPassword(
+                        currentPassword,
+                        storedPasswordHash
+                )
+        ) {
+            return@dbQuery false
+        }
+
+        // Hash new password using BCrypt and update
+        val newPasswordHash =
+                com.ilkinbayramov.ninjatalk.utils.PasswordHasher.hashPassword(newPassword)
+        Users.update({ Users.id eq userId }) { it[Users.password] = newPasswordHash } > 0
+    }
 }

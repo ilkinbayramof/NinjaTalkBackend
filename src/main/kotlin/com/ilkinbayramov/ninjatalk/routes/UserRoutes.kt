@@ -125,6 +125,44 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                         mapOf("message" to "Profile image deleted successfully")
                 )
             }
+
+            // Change password
+            put("/password") {
+                val principal = call.principal<JWTPrincipal>()
+                val userId =
+                        principal?.payload?.subject
+                                ?: return@put call.respond(HttpStatusCode.Unauthorized)
+
+                val request =
+                        call.receive<com.ilkinbayramov.ninjatalk.models.ChangePasswordRequest>()
+
+                // Validate new password
+                if (request.newPassword.length < 6) {
+                    return@put call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "New password must be at least 6 characters")
+                    )
+                }
+
+                val success =
+                        userService.changePassword(
+                                userId,
+                                request.currentPassword,
+                                request.newPassword
+                        )
+
+                if (success) {
+                    call.respond(
+                            HttpStatusCode.OK,
+                            mapOf("message" to "Password changed successfully")
+                    )
+                } else {
+                    call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf("error" to "Current password is incorrect")
+                    )
+                }
+            }
         }
     }
 }
