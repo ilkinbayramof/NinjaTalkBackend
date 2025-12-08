@@ -163,6 +163,28 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                     )
                 }
             }
+
+            // Soft delete account
+            delete("/me") {
+                val principal = call.principal<JWTPrincipal>()
+                val userId =
+                        principal?.payload?.subject
+                                ?: return@delete call.respond(HttpStatusCode.Unauthorized)
+
+                val success = userService.softDeleteUser(userId)
+
+                if (success) {
+                    call.respond(
+                            HttpStatusCode.OK,
+                            mapOf("message" to "Account deleted successfully")
+                    )
+                } else {
+                    call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to delete account")
+                    )
+                }
+            }
         }
     }
 }

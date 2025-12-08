@@ -4,7 +4,6 @@ import com.ilkinbayramov.ninjatalk.database.DatabaseFactory.dbQuery
 import com.ilkinbayramov.ninjatalk.database.Users
 import com.ilkinbayramov.ninjatalk.models.User
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 
 class UserService {
@@ -33,7 +32,7 @@ class UserService {
     }
 
     suspend fun getAllUsers(): List<User> = dbQuery {
-        Users.selectAll().map {
+        Users.select { Users.isDeleted eq false }.map {
             User(
                     id = it[Users.id],
                     email = it[Users.email],
@@ -43,6 +42,13 @@ class UserService {
                     profileImageUrl = it[Users.profileImageUrl]
             )
         }
+    }
+
+    suspend fun softDeleteUser(userId: String): Boolean = dbQuery {
+        Users.update({ Users.id eq userId }) {
+            it[Users.isDeleted] = true
+            it[Users.deletedAt] = System.currentTimeMillis()
+        } > 0
     }
 
     suspend fun changePassword(

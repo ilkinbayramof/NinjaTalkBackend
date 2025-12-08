@@ -11,6 +11,8 @@ object Users : Table() {
     val bio = varchar("bio", 500).nullable()
     val profileImageUrl = varchar("profile_image_url", 500).nullable()
     val createdAt = long("created_at")
+    val isDeleted = bool("is_deleted").default(false)
+    val deletedAt = long("deleted_at").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
