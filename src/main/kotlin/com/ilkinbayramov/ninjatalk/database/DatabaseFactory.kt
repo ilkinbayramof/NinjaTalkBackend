@@ -18,13 +18,13 @@ object DatabaseFactory {
         val database = Database.connect(createHikariDataSource(databaseUrl, user, password))
 
         transaction(database) {
-            // This will automatically add missing columns including isDeleted and deletedAt
-            SchemaUtils.createMissingTablesAndColumns(
-                    Users,
-                    Conversations,
-                    Messages,
-                    AnonymousIdentities
-            )
+            println("DATABASE: Creating tables...")
+
+            // Force create tables (will skip if already exist with IF NOT EXISTS)
+            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers)
+
+            println("DATABASE: Tables created successfully")
+            println("DATABASE: BlockedUsers table should now exist")
         }
     }
 

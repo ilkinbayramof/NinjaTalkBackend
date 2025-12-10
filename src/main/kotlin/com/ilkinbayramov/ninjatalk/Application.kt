@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.ilkinbayramov.ninjatalk.database.DatabaseFactory
 import com.ilkinbayramov.ninjatalk.routes.authRoutes
+import com.ilkinbayramov.ninjatalk.routes.blockRoutes
 import com.ilkinbayramov.ninjatalk.routes.chatRoutes
 import com.ilkinbayramov.ninjatalk.routes.userRoutes
 import com.ilkinbayramov.ninjatalk.services.AuthService
@@ -64,6 +65,7 @@ fun Application.module() {
         authRoutes(authService)
         userRoutes(userService, jwtService, fileService)
         chatRoutes(chatService)
+        blockRoutes()
 
         // Serve static files
         staticFiles("/uploads", File("uploads"))

@@ -17,7 +17,15 @@ object DatabaseFactory {
 
         val database = Database.connect(createHikariDataSource(databaseUrl, user, password))
 
-        transaction(database) { SchemaUtils.create(Users) }
+        transaction(database) {
+            println("DATABASE: Creating tables...")
+
+            // Force create tables (will skip if already exist with IF NOT EXISTS)
+            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers)
+
+            println("DATABASE: Tables created successfully")
+            println("DATABASE: BlockedUsers table should now exist")
+        }
     }
 
     private fun createHikariDataSource(
