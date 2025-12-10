@@ -11,7 +11,7 @@ class JwtService(private val secret: String) {
         return JWT.create()
                 .withSubject(userId)
                 .withClaim("email", email)
-                .withExpiresAt(Date(System.currentTimeMillis() + 86400000))
+                .withExpiresAt(Date(System.currentTimeMillis() + 31536000000L)) // 365 days
                 .sign(algorithm)
     }
 }
