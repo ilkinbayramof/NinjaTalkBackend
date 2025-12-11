@@ -94,6 +94,37 @@ fun Route.chatRoutes(chatService: ChatService) {
                                         call.respond(HttpStatusCode.OK, mapOf("status" to "sent"))
                                 }
                         }
+
+                        // Delete conversation
+                        delete("/conversations/{id}") {
+                                val principal = call.principal<JWTPrincipal>()
+                                val userId =
+                                        principal?.payload?.subject
+                                                ?: return@delete call.respond(
+                                                        HttpStatusCode.Unauthorized
+                                                )
+
+                                val conversationId =
+                                        call.parameters["id"]
+                                                ?: return@delete call.respond(
+                                                        HttpStatusCode.BadRequest,
+                                                        mapOf("error" to "Missing conversation ID")
+                                                )
+
+                                val success = chatService.deleteConversation(conversationId, userId)
+
+                                if (success) {
+                                        call.respond(
+                                                HttpStatusCode.OK,
+                                                mapOf("message" to "Conversation deleted")
+                                        )
+                                } else {
+                                        call.respond(
+                                                HttpStatusCode.Forbidden,
+                                                mapOf("error" to "Not authorized")
+                                        )
+                                }
+                        }
                 }
         }
 }

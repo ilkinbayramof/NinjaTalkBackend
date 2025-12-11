@@ -249,4 +249,39 @@ class ChatService(private val blockService: BlockService = BlockService()) {
                         it[createdAt] = System.currentTimeMillis()
                 }
         }
+
+        suspend fun deleteConversation(conversationId: String, userId: String): Boolean =
+                DatabaseFactory.dbQuery {
+                        // Verify user is participant
+                        val conversation =
+                                Conversations.select { Conversations.id eq conversationId }
+                                        .singleOrNull()
+                                        ?: return@dbQuery false
+
+                        val isParticipant =
+                                conversation[Conversations.user1Id] == userId ||
+                                        conversation[Conversations.user2Id] == userId
+
+                        if (!isParticipant) return@dbQuery false
+
+                        // Delete all messages in conversation
+                        val deleteMessagesSQL =
+                                "DELETE FROM ${Messages.tableName} WHERE conversation_id = '$conversationId'"
+                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                                .exec(deleteMessagesSQL)
+
+                        // Delete anonymous identities
+                        val deleteIdentitiesSQL =
+                                "DELETE FROM ${AnonymousIdentities.tableName} WHERE conversation_id = '$conversationId'"
+                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                                .exec(deleteIdentitiesSQL)
+
+                        // Delete conversation
+                        val deleteConversationSQL =
+                                "DELETE FROM ${Conversations.tableName} WHERE id = '$conversationId'"
+                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                                .exec(deleteConversationSQL)
+
+                        true
+                }
 }

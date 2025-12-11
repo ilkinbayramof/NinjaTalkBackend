@@ -41,7 +41,7 @@ object DatabaseFactory {
                     this.password = password
                     maximumPoolSize = 3
                     isAutoCommit = false
-                    transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+                    transactionIsolation = "TRANSACTION_READ_COMMITTED"
                     validate()
                 }
         return HikariDataSource(config)
