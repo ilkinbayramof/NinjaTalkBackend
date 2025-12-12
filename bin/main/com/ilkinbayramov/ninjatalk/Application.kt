@@ -7,6 +7,7 @@ import com.ilkinbayramov.ninjatalk.routes.authRoutes
 import com.ilkinbayramov.ninjatalk.routes.blockRoutes
 import com.ilkinbayramov.ninjatalk.routes.chatRoutes
 import com.ilkinbayramov.ninjatalk.routes.userRoutes
+import com.ilkinbayramov.ninjatalk.routes.webSocketRoutes
 import com.ilkinbayramov.ninjatalk.services.AuthService
 import com.ilkinbayramov.ninjatalk.services.ChatService
 import com.ilkinbayramov.ninjatalk.services.FileService
@@ -48,6 +49,8 @@ fun Application.module() {
         allowHeader("Authorization")
     }
 
+    install(io.ktor.server.websocket.WebSockets)
+
     install(Authentication) {
         jwt("auth-jwt") {
             verifier(JWT.require(Algorithm.HMAC256(jwtSecret)).build())
@@ -66,6 +69,7 @@ fun Application.module() {
         userRoutes(userService, jwtService, fileService)
         chatRoutes(chatService)
         blockRoutes()
+        webSocketRoutes(chatService)
 
         // Serve static files
         staticFiles("/uploads", File("uploads"))

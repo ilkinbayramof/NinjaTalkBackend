@@ -284,4 +284,17 @@ class ChatService(private val blockService: BlockService = BlockService()) {
 
                         true
                 }
+
+        suspend fun getConversationParticipants(conversationId: String): List<String> =
+                DatabaseFactory.dbQuery {
+                        Conversations.select { Conversations.id eq conversationId }
+                                .singleOrNull()
+                                ?.let { row ->
+                                        listOf(
+                                                row[Conversations.user1Id],
+                                                row[Conversations.user2Id]
+                                        )
+                                }
+                                ?: emptyList()
+                }
 }
