@@ -9,5 +9,6 @@ data class User(
         val gender: String,
         val birthDate: String,
         val bio: String? = null,
-        val profileImageUrl: String? = null
+        val profileImageUrl: String? = null,
+        val isPremium: Boolean = false
 )

@@ -13,6 +13,7 @@ object Users : Table() {
     val createdAt = long("created_at")
     val isDeleted = bool("is_deleted").default(false)
     val deletedAt = long("deleted_at").nullable()
+    val isPremium = bool("is_premium").default(false)
 
     override val primaryKey = PrimaryKey(id)
 }

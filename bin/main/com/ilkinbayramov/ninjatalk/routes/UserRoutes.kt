@@ -17,7 +17,7 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
 
     route("/api/users") {
 
-        // Get all users (for shuffle screen) - now with block filtering
+        // Get all users (for shuffle screen) - now with block filtering and age/gender filters
         authenticate("auth-jwt") {
             get {
                 val principal = call.principal<JWTPrincipal>()
@@ -25,9 +25,21 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                         principal?.payload?.subject
                                 ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
+                // Get query parameters for filtering
+                val minAge = call.request.queryParameters["minAge"]?.toIntOrNull()
+                val maxAge = call.request.queryParameters["maxAge"]?.toIntOrNull()
+                val gender = call.request.queryParameters["gender"]
+
                 // Get all users and filter out blocked ones
                 val blockService = com.ilkinbayramov.ninjatalk.services.BlockService()
-                val allUsers = userService.getAllUsers()
+
+                // Use filtered or all users based on parameters
+                val allUsers =
+                        if (minAge != null || maxAge != null || gender != null) {
+                            userService.getFilteredUsers(minAge, maxAge, gender)
+                        } else {
+                            userService.getAllUsers()
+                        }
 
                 // Filter out:
                 // 1. Users that current user has blocked

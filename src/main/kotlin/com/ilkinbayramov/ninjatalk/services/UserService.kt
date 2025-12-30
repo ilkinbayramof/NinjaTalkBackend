@@ -17,7 +17,8 @@ class UserService {
                             gender = it[Users.gender],
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
-                            profileImageUrl = it[Users.profileImageUrl]
+                            profileImageUrl = it[Users.profileImageUrl],
+                            isPremium = it[Users.isPremium]
                     )
                 }
                 .singleOrNull()
@@ -39,9 +40,55 @@ class UserService {
                     gender = it[Users.gender],
                     birthDate = it[Users.birthDate],
                     bio = it[Users.bio],
-                    profileImageUrl = it[Users.profileImageUrl]
+                    profileImageUrl = it[Users.profileImageUrl],
+                    isPremium = it[Users.isPremium]
             )
         }
+    }
+
+    suspend fun getFilteredUsers(
+            minAge: Int? = null,
+            maxAge: Int? = null,
+            gender: String? = null
+    ): List<User> = dbQuery {
+        val currentYear = java.time.LocalDate.now().year
+
+        Users.select { Users.isDeleted eq false }
+                .map {
+                    User(
+                            id = it[Users.id],
+                            email = it[Users.email],
+                            gender = it[Users.gender],
+                            birthDate = it[Users.birthDate],
+                            bio = it[Users.bio],
+                            profileImageUrl = it[Users.profileImageUrl],
+                            isPremium = it[Users.isPremium]
+                    )
+                }
+                .filter { user ->
+                    // Gender filter
+                    val genderMatch =
+                            gender == null || user.gender.equals(gender, ignoreCase = true)
+
+                    // Age filter - birthDate format: "1990-05-15"
+                    val ageMatch =
+                            if (minAge != null || maxAge != null) {
+                                try {
+                                    val birthYear = user.birthDate.split("-")[0].toInt()
+                                    val userAge = currentYear - birthYear
+
+                                    val minMatch = minAge == null || userAge >= minAge
+                                    val maxMatch = maxAge == null || userAge <= maxAge
+                                    minMatch && maxMatch
+                                } catch (e: Exception) {
+                                    false // Invalid date format
+                                }
+                            } else {
+                                true
+                            }
+
+                    genderMatch && ageMatch
+                }
     }
 
     suspend fun softDeleteUser(userId: String): Boolean = dbQuery {
