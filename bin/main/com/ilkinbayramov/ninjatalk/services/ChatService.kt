@@ -7,7 +7,10 @@ import java.util.UUID
 import kotlin.random.Random
 import org.jetbrains.exposed.sql.*
 
-class ChatService(private val blockService: BlockService = BlockService()) {
+class ChatService(
+        private val blockService: BlockService = BlockService(),
+        private val notificationService: NotificationService? = null
+) {
 
         suspend fun createOrGetConversation(user1Id: String, user2Id: String): String =
                 DatabaseFactory.dbQuery {
@@ -198,14 +201,28 @@ class ChatService(private val blockService: BlockService = BlockService()) {
                                 it[lastMessageAt] = timestamp
                         }
 
-                        Message(
-                                id = messageId,
-                                conversationId = conversationId,
-                                senderId = senderId,
-                                content = content,
-                                timestamp = timestamp,
-                                isRead = false
+                        val newMessage =
+                                Message(
+                                        id = messageId,
+                                        conversationId = conversationId,
+                                        senderId = senderId,
+                                        content = content,
+                                        timestamp = timestamp,
+                                        isRead = false
+                                )
+
+                        // Get sender's anonymous name for the notification
+                        val senderAnonymousName = getAnonymousName(senderId, conversationId)
+
+                        // Send FCM push notification to recipient
+                        notificationService?.sendMessageNotification(
+                                recipientId = receiverId,
+                                senderName = senderAnonymousName,
+                                messageContent = content,
+                                conversationId = conversationId
                         )
+
+                        newMessage
                 }
 
         private fun getAnonymousName(userId: String, conversationId: String): String {

@@ -4,3 +4,7 @@
 build/
 *.iml
 *.log
+
+# Firebase Admin SDK credentials (NEVER commit this!)
+src/main/resources/firebase-adminsdk.json
+bin/main/firebase-adminsdk.json

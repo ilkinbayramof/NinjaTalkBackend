@@ -11,6 +11,12 @@ repositories {
     mavenCentral()
 }
 
+configurations.all {
+    resolutionStrategy {
+        force("com.google.guava:guava:32.1.1-jre")
+    }
+}
+
 dependencies {
     // Ktor Server Core
     implementation("io.ktor:ktor-server-core-jvm")
@@ -50,6 +56,11 @@ dependencies {
     
     // BCrypt for password hashing
     implementation("org.mindrot:jbcrypt:0.4")
+    
+    // Firebase Admin SDK for push notifications
+    implementation("com.google.firebase:firebase-admin:9.2.0") {
+        exclude(group = "com.google.guava", module = "listenablefuture")
+    }
     
     // Logback for logging
     implementation("ch.qos.logback:logback-classic:1.4.14")

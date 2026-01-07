@@ -18,7 +18,8 @@ class UserService {
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
                             profileImageUrl = it[Users.profileImageUrl],
-                            isPremium = it[Users.isPremium]
+                            isPremium = it[Users.isPremium],
+                            fcmToken = it[Users.fcmToken]
                     )
                 }
                 .singleOrNull()
@@ -41,7 +42,8 @@ class UserService {
                     birthDate = it[Users.birthDate],
                     bio = it[Users.bio],
                     profileImageUrl = it[Users.profileImageUrl],
-                    isPremium = it[Users.isPremium]
+                    isPremium = it[Users.isPremium],
+                    fcmToken = it[Users.fcmToken]
             )
         }
     }
@@ -62,7 +64,8 @@ class UserService {
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
                             profileImageUrl = it[Users.profileImageUrl],
-                            isPremium = it[Users.isPremium]
+                            isPremium = it[Users.isPremium],
+                            fcmToken = it[Users.fcmToken]
                     )
                 }
                 .filter { user ->
@@ -121,5 +124,9 @@ class UserService {
         val newPasswordHash =
                 com.ilkinbayramov.ninjatalk.utils.PasswordHasher.hashPassword(newPassword)
         Users.update({ Users.id eq userId }) { it[Users.password] = newPasswordHash } > 0
+    }
+
+    suspend fun updateFcmToken(userId: String, token: String): Boolean = dbQuery {
+        Users.update({ Users.id eq userId }) { it[Users.fcmToken] = token } > 0
     }
 }

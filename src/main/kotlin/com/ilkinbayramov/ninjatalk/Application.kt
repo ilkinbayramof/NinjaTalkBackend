@@ -27,19 +27,26 @@ import io.ktor.server.routing.*
 import java.io.File
 
 fun main() {
+    // Initialize database
+    DatabaseFactory.init()
+
+    // Initialize Firebase Admin SDK
+    com.ilkinbayramov.ninjatalk.config.FirebaseConfig.initialize()
+
     embeddedServer(Netty, port = 8080, host = "0.0.0.0", module = Application::module)
             .start(wait = true)
 }
 
 fun Application.module() {
-    DatabaseFactory.init()
 
     val jwtSecret = System.getenv("JWT_SECRET") ?: "your-secret-key-change-in-production"
     val jwtService = JwtService(jwtSecret)
     val authService = AuthService(jwtService)
     val userService = UserService()
     val fileService = FileService()
-    val chatService = ChatService()
+    val notificationService = com.ilkinbayramov.ninjatalk.services.NotificationService(userService)
+    val chatService =
+            ChatService(com.ilkinbayramov.ninjatalk.services.BlockService(), notificationService)
 
     install(ContentNegotiation) { json() }
 

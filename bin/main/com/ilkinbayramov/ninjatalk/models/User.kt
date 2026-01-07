@@ -10,5 +10,6 @@ data class User(
         val birthDate: String,
         val bio: String? = null,
         val profileImageUrl: String? = null,
-        val isPremium: Boolean = false
+        val isPremium: Boolean = false,
+        val fcmToken: String? = null
 )

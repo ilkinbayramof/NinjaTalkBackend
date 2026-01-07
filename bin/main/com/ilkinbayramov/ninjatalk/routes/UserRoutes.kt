@@ -12,6 +12,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
 
 fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileService: FileService) {
 
@@ -224,6 +225,28 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                     )
                 }
             }
+            
+            // Update FCM token
+            post("/fcm-token") {
+                val userId =
+                        call.principal<JWTPrincipal>()?.payload?.subject
+                                ?: return@post call.respond(HttpStatusCode.Unauthorized)
+
+                val request = call.receive<UpdateFcmTokenRequest>()
+
+                val updated = userService.updateFcmToken(userId, request.token)
+
+                if (updated) {
+                    call.respond(HttpStatusCode.OK, mapOf("message" to "FCM token updated"))
+                } else {
+                    call.respond(
+                            HttpStatusCode.InternalServerError,
+                            mapOf("error" to "Failed to update FCM token")
+                    )
+                }
+            }
         }
     }
 }
+
+@Serializable data class UpdateFcmTokenRequest(val token: String)

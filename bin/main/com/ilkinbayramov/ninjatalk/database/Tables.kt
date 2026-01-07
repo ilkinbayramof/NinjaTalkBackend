@@ -14,6 +14,7 @@ object Users : Table() {
     val isDeleted = bool("is_deleted").default(false)
     val deletedAt = long("deleted_at").nullable()
     val isPremium = bool("is_premium").default(false)
+    val fcmToken = varchar("fcm_token", 255).nullable()
 
     override val primaryKey = PrimaryKey(id)
 }
