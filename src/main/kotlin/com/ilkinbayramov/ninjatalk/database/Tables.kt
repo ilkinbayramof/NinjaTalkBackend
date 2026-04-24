@@ -49,3 +49,12 @@ object AnonymousIdentities : Table() {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+object PasswordResetTokens : Table() {
+    val id = varchar("id", 36)
+    val userId = varchar("user_id", 36).references(Users.id)
+    val token = varchar("token", 255)
+    val createdAt = long("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}

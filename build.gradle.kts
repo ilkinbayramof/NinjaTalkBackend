@@ -42,6 +42,12 @@ dependencies {
     // WebSockets (for real-time chat)
     implementation("io.ktor:ktor-server-websockets-jvm")
     
+    // HTML Builder
+    implementation("io.ktor:ktor-server-html-builder-jvm")
+    
+    // Email
+    implementation("org.apache.commons:commons-email:1.5")
+    
     // PostgreSQL
     implementation("org.postgresql:postgresql:42.7.1")
     

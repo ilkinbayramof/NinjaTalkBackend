@@ -21,7 +21,7 @@ object DatabaseFactory {
             println("DATABASE: Creating tables...")
 
             // Force create tables (will skip if already exist with IF NOT EXISTS)
-            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers)
+            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers, PasswordResetTokens)
 
             println("DATABASE: Tables created successfully")
             println("DATABASE: BlockedUsers table should now exist")
