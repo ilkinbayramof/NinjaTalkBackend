@@ -7,8 +7,8 @@ object EmailService {
     // TODO: GMAIL hesabı bilgilerinizi buraya girin (veya ortam değişkenlerinden alın)
     private const val SMTP_HOST = "smtp.gmail.com"
     private const val SMTP_PORT = 465 // or 587
-    private const val SMTP_USERNAME = "your-email@gmail.com" 
-    private const val SMTP_PASSWORD = "your-app-password" 
+    private const val SMTP_USERNAME = "ilkinbayramov066@gmail.com"
+    private const val SMTP_PASSWORD = "rhzlwdiahzayuvbm"
 
     fun sendPasswordResetEmail(toEmail: String, resetLink: String) {
         println("=====================================================")
@@ -22,18 +22,18 @@ object EmailService {
             email.setSmtpPort(SMTP_PORT)
             email.setAuthenticator(DefaultAuthenticator(SMTP_USERNAME, SMTP_PASSWORD))
             email.isSSLOnConnect = true
-            email.setFrom(SMTP_USERNAME, "NinjaTalk Destek")
-            email.subject = "NinjaTalk - Şifre Sıfırlama"
+            email.setFrom(SMTP_USERNAME, "PeChat Support")
+            email.subject = "PeChat - Reset Password"
             
             val htmlMsg = """
                 <html>
                     <body>
-                        <h2>Şifrenizi Sıfırlayın</h2>
-                        <p>Şifrenizi sıfırlamak için aşağıdaki linke tıklayın:</p>
+                        <h2>Reset Password</h2>
+                        <p>Click the link below to reset your password:</p>
                         <br/>
-                        <a href="$resetLink">Şifremi Sıfırla</a>
+                        <a href="$resetLink">Reset My Password</a>
                         <br/><br/>
-                        <p>Eğer bu isteği siz yapmadıysanız, lütfen bu e-postayı dikkate almayın.</p>
+                        <p>If you didn't request this, please ignore this email.</p>
                     </body>
                 </html>
             """.trimIndent()
