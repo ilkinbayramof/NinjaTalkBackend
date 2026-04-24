@@ -48,10 +48,13 @@ class ChatService(
         suspend fun getConversations(userId: String): List<Conversation> =
                 DatabaseFactory.dbQuery {
                         // Get all conversations where user is participant
+                        // AND at least one message exists (lastMessageAt IS NOT NULL)
+                        // Empty conversations (from profile clicks) are hidden
                         val conversations =
                                 Conversations.select {
-                                                (Conversations.user1Id eq userId) or
-                                                        (Conversations.user2Id eq userId)
+                                                ((Conversations.user1Id eq userId) or
+                                                        (Conversations.user2Id eq userId)) and
+                                                        Conversations.lastMessageAt.isNotNull()
                                         }
                                         .orderBy(
                                                 Conversations.lastMessageAt to
