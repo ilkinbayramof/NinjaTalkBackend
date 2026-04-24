@@ -43,9 +43,24 @@ class NotificationService(private val userService: UserService) {
             val response = FirebaseMessaging.getInstance().send(message)
             println("🔔 FCM: Sent notification to $userId - response: $response")
             
+        } catch (e: com.google.firebase.messaging.FirebaseMessagingException) {
+            val errorCode = e.messagingErrorCode
+            println("❌ FCM MessagingException [$errorCode]: ${e.message}")
+
+            // Stale/invalid token — database-dən sil
+            if (errorCode == com.google.firebase.messaging.MessagingErrorCode.UNREGISTERED ||
+                errorCode == com.google.firebase.messaging.MessagingErrorCode.INVALID_ARGUMENT
+            ) {
+                println("🗑️ FCM: Stale token, database-dən silir (userId=$userId)")
+                userService.updateFcmToken(userId, "")
+            }
         } catch (e: Exception) {
-            println("❌ FCM: Failed to send notification - ${e.message}")
-            e.printStackTrace()
+            println("❌ FCM Exception [${e.javaClass.name}]: ${e.message}")
+            var cause: Throwable? = e.cause
+            while (cause != null) {
+                println("   Caused by [${cause.javaClass.name}]: ${cause.message}")
+                cause = cause.cause
+            }
         }
     }
     
