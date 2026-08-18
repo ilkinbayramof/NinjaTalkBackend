@@ -26,6 +26,11 @@ object Conversations : Table() {
     val createdAt = long("created_at")
     val lastMessageAt = long("last_message_at").nullable()
 
+    // Per-user soft delete: conversation is hidden for that user until a newer
+    // message arrives. Rows stay intact for the other participant.
+    val user1DeletedAt = long("user1_deleted_at").nullable()
+    val user2DeletedAt = long("user2_deleted_at").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 

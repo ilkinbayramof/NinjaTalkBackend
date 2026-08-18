@@ -60,9 +60,30 @@ class ChatService(
                                                 Conversations.lastMessageAt to
                                                         SortOrder.DESC_NULLS_LAST
                                         )
+                                        .filter { row ->
+                                                // Hide conversations this user deleted, unless a
+                                                // newer message has arrived since the deletion
+                                                val deletedAt = deletedAtFor(row, userId)
+                                                deletedAt == null ||
+                                                        (row[Conversations.lastMessageAt]
+                                                                ?: 0L) > deletedAt
+                                        }
 
                         conversations.map { row ->
                                 val conversationId = row[Conversations.id]
+                                val deletedAt = deletedAtFor(row, userId)
+                                // Only messages newer than this user's deletion are visible to them
+                                val visibleMessages =
+                                        Op.build {
+                                                if (deletedAt == null) {
+                                                        Messages.conversationId eq conversationId
+                                                } else {
+                                                        (Messages.conversationId eq
+                                                                conversationId) and
+                                                                (Messages.timestamp greater
+                                                                        deletedAt)
+                                                }
+                                        }
                                 val otherUserId =
                                         if (row[Conversations.user1Id] == userId) {
                                                 row[Conversations.user2Id]
@@ -72,9 +93,7 @@ class ChatService(
 
                                 // Get first message to determine who initiated
                                 val firstMessage =
-                                        Messages.select {
-                                                        Messages.conversationId eq conversationId
-                                                }
+                                        Messages.select(visibleMessages)
                                                 .orderBy(Messages.timestamp to SortOrder.ASC)
                                                 .limit(1)
                                                 .singleOrNull()
@@ -99,9 +118,7 @@ class ChatService(
 
                                 // Get last message
                                 val lastMessage =
-                                        Messages.select {
-                                                        Messages.conversationId eq conversationId
-                                                }
+                                        Messages.select(visibleMessages)
                                                 .orderBy(Messages.timestamp to SortOrder.DESC)
                                                 .limit(1)
                                                 .singleOrNull()
@@ -109,8 +126,7 @@ class ChatService(
                                 // Count unread messages
                                 val unreadCount =
                                         Messages.select {
-                                                        (Messages.conversationId eq
-                                                                conversationId) and
+                                                        visibleMessages and
                                                                 (Messages.senderId neq userId) and
                                                                 (Messages.isRead eq false)
                                                 }
@@ -142,14 +158,25 @@ class ChatService(
 
                         if (!isParticipant) return@dbQuery emptyList()
 
+                        // Only messages newer than this user's own deletion are visible to them
+                        val deletedAt = deletedAtFor(conversation, userId)
+                        val visibleMessages =
+                                Op.build {
+                                        if (deletedAt == null) {
+                                                Messages.conversationId eq conversationId
+                                        } else {
+                                                (Messages.conversationId eq conversationId) and
+                                                        (Messages.timestamp greater deletedAt)
+                                        }
+                                }
+
                         // Mark messages as read
-                        Messages.update({
-                                (Messages.conversationId eq conversationId) and
-                                        (Messages.senderId neq userId)
-                        }) { it[isRead] = true }
+                        Messages.update({ visibleMessages and (Messages.senderId neq userId) }) {
+                                it[isRead] = true
+                        }
 
                         // Get messages
-                        Messages.select { Messages.conversationId eq conversationId }
+                        Messages.select(visibleMessages)
                                 .orderBy(Messages.timestamp to SortOrder.ASC)
                                 .map { row ->
                                         Message(
@@ -270,6 +297,23 @@ class ChatService(
                 }
         }
 
+        /**
+         * Returns the timestamp at which [userId] deleted this conversation, or null if they never
+         * did. Messages at or before that timestamp are invisible to that user only.
+         */
+        private fun deletedAtFor(conversationRow: ResultRow, userId: String): Long? =
+                if (conversationRow[Conversations.user1Id] == userId) {
+                        conversationRow[Conversations.user1DeletedAt]
+                } else {
+                        conversationRow[Conversations.user2DeletedAt]
+                }
+
+        /**
+         * Deletes the conversation for [userId] only. The other participant keeps their copy and
+         * all messages. If a new message arrives afterwards, the conversation reappears for this
+         * user containing only the new messages. The rows are physically removed only once both
+         * participants have deleted the conversation.
+         */
         suspend fun deleteConversation(conversationId: String, userId: String): Boolean =
                 DatabaseFactory.dbQuery {
                         // Verify user is participant
@@ -278,32 +322,58 @@ class ChatService(
                                         .singleOrNull()
                                         ?: return@dbQuery false
 
-                        val isParticipant =
-                                conversation[Conversations.user1Id] == userId ||
-                                        conversation[Conversations.user2Id] == userId
+                        val isUser1 = conversation[Conversations.user1Id] == userId
+                        val isUser2 = conversation[Conversations.user2Id] == userId
 
-                        if (!isParticipant) return@dbQuery false
+                        if (!isUser1 && !isUser2) return@dbQuery false
 
-                        // Delete all messages in conversation
-                        val deleteMessagesSQL =
-                                "DELETE FROM ${Messages.tableName} WHERE conversation_id = '$conversationId'"
-                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
-                                .exec(deleteMessagesSQL)
+                        val now = System.currentTimeMillis()
+                        val lastMessageAt = conversation[Conversations.lastMessageAt] ?: 0L
+                        val otherDeletedAt =
+                                if (isUser1) {
+                                        conversation[Conversations.user2DeletedAt]
+                                } else {
+                                        conversation[Conversations.user1DeletedAt]
+                                }
 
-                        // Delete anonymous identities
-                        val deleteIdentitiesSQL =
-                                "DELETE FROM ${AnonymousIdentities.tableName} WHERE conversation_id = '$conversationId'"
-                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
-                                .exec(deleteIdentitiesSQL)
+                        // Both sides have now deleted everything -> nothing left to keep
+                        val otherAlsoDeletedEverything =
+                                otherDeletedAt != null && otherDeletedAt >= lastMessageAt
 
-                        // Delete conversation
-                        val deleteConversationSQL =
-                                "DELETE FROM ${Conversations.tableName} WHERE id = '$conversationId'"
-                        org.jetbrains.exposed.sql.transactions.TransactionManager.current()
-                                .exec(deleteConversationSQL)
+                        if (otherAlsoDeletedEverything) {
+                                hardDeleteConversation(conversationId)
+                        } else {
+                                Conversations.update({ Conversations.id eq conversationId }) {
+                                        if (isUser1) {
+                                                it[user1DeletedAt] = now
+                                        } else {
+                                                it[user2DeletedAt] = now
+                                        }
+                                }
+                        }
 
                         true
                 }
+
+        private fun hardDeleteConversation(conversationId: String) {
+                // Delete all messages in conversation
+                val deleteMessagesSQL =
+                        "DELETE FROM ${Messages.tableName} WHERE conversation_id = '$conversationId'"
+                org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                        .exec(deleteMessagesSQL)
+
+                // Delete anonymous identities
+                val deleteIdentitiesSQL =
+                        "DELETE FROM ${AnonymousIdentities.tableName} WHERE conversation_id = '$conversationId'"
+                org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                        .exec(deleteIdentitiesSQL)
+
+                // Delete conversation
+                val deleteConversationSQL =
+                        "DELETE FROM ${Conversations.tableName} WHERE id = '$conversationId'"
+                org.jetbrains.exposed.sql.transactions.TransactionManager.current()
+                        .exec(deleteConversationSQL)
+        }
 
         suspend fun getConversationParticipants(conversationId: String): List<String> =
                 DatabaseFactory.dbQuery {
