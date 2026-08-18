@@ -5,6 +5,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.ilkinbayramov.ninjatalk.database.DatabaseFactory
 import com.ilkinbayramov.ninjatalk.routes.authRoutes
 import com.ilkinbayramov.ninjatalk.routes.blockRoutes
+import com.ilkinbayramov.ninjatalk.routes.boostRoutes
 import com.ilkinbayramov.ninjatalk.routes.chatRoutes
 import com.ilkinbayramov.ninjatalk.routes.userRoutes
 import com.ilkinbayramov.ninjatalk.routes.webSocketRoutes
@@ -42,7 +43,11 @@ fun Application.module() {
     val jwtSecret = System.getenv("JWT_SECRET") ?: "your-secret-key-change-in-production"
     val jwtService = JwtService(jwtSecret)
     val authService = AuthService(jwtService)
-    val userService = UserService()
+    val boostService =
+            com.ilkinbayramov.ninjatalk.services.BoostService(
+                    com.ilkinbayramov.ninjatalk.billing.BillingConfig.createVerifier()
+            )
+    val userService = UserService(boostService)
     val fileService = FileService()
     val notificationService = com.ilkinbayramov.ninjatalk.services.NotificationService(userService)
     val chatService =
@@ -73,9 +78,10 @@ fun Application.module() {
 
     routing {
         authRoutes(authService)
-        userRoutes(userService, jwtService, fileService)
+        userRoutes(userService, jwtService, fileService, boostService)
         chatRoutes(chatService)
         blockRoutes()
+        boostRoutes(boostService)
         webSocketRoutes(chatService)
 
         // Serve static files

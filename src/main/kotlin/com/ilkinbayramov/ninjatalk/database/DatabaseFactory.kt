@@ -21,7 +21,7 @@ object DatabaseFactory {
             println("DATABASE: Creating tables...")
 
             // Force create tables (will skip if already exist with IF NOT EXISTS)
-            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers, PasswordResetTokens)
+            SchemaUtils.create(Users, Conversations, Messages, AnonymousIdentities, BlockedUsers, PasswordResetTokens, Boosts)
 
             // Migration: per-user conversation delete columns (existing installs)
             exec("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user1_deleted_at BIGINT")

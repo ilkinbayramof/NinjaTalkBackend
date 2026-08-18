@@ -55,6 +55,25 @@ object AnonymousIdentities : Table() {
     override val primaryKey = PrimaryKey(id)
 }
 
+/**
+ * A purchased boost window. Rows are never deleted so refunds and support requests stay auditable;
+ * a refunded boost is marked instead.
+ */
+object Boosts : Table() {
+    val id = varchar("id", 36)
+    val userId = varchar("user_id", 36).references(Users.id)
+    val productId = varchar("product_id", 50) // boost_5 / boost_15 / boost_30
+    val platform = varchar("platform", 10) // android / ios
+    // Store transaction id. Unique so the same receipt can never be redeemed twice.
+    val transactionId = varchar("transaction_id", 255).uniqueIndex()
+    val startedAt = long("started_at")
+    val expiresAt = long("expires_at")
+    val status = varchar("status", 20).default("active") // active / refunded
+    val createdAt = long("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 object PasswordResetTokens : Table() {
     val id = varchar("id", 36)
     val userId = varchar("user_id", 36).references(Users.id)

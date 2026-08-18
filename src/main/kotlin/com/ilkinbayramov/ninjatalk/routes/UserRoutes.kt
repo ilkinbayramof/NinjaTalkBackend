@@ -14,7 +14,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
-fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileService: FileService) {
+fun Route.userRoutes(
+        userService: UserService,
+        jwtService: JwtService,
+        fileService: FileService,
+        boostService: com.ilkinbayramov.ninjatalk.services.BoostService
+) {
 
     route("/api/users") {
 
@@ -30,6 +35,18 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                 val minAge = call.request.queryParameters["minAge"]?.toIntOrNull()
                 val maxAge = call.request.queryParameters["maxAge"]?.toIntOrNull()
                 val gender = call.request.queryParameters["gender"]
+
+                // Filtering is a paid feature. The client also hides it, but that check is
+                // bypassable, so it has to be enforced here as well.
+                if (minAge != null || maxAge != null || gender != null) {
+                    val isPremium = userService.getUserById(userId)?.isPremium == true
+                    if (!isPremium) {
+                        return@get call.respond(
+                                HttpStatusCode.PaymentRequired,
+                                mapOf("error" to "Filters require an active boost")
+                        )
+                    }
+                }
 
                 // Get all users and filter out blocked ones
                 val blockService = com.ilkinbayramov.ninjatalk.services.BlockService()
@@ -59,7 +76,12 @@ fun Route.userRoutes(userService: UserService, jwtService: JwtService, fileServi
                             !isBlocked && user.id != userId // Also exclude self
                         }
 
-                call.respond(filteredUsers)
+                // Boosted profiles surface first - this is what people are paying for
+                val boosted = boostService.activeBoostUserIds()
+                val ordered =
+                        filteredUsers.sortedByDescending { user -> user.id in boosted }
+
+                call.respond(ordered)
             }
         }
 

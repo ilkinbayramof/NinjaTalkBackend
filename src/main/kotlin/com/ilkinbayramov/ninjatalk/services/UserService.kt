@@ -6,10 +6,19 @@ import com.ilkinbayramov.ninjatalk.models.User
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 
-class UserService {
+class UserService(private val boostService: BoostService? = null) {
 
-    suspend fun getUserById(userId: String): User? = dbQuery {
-        Users.select { Users.id eq userId }
+    /**
+     * Users with a running boost count as premium for now. Splitting boost from a real premium
+     * subscription later only means changing this one place.
+     */
+    private suspend fun boostedUserIds(): Set<String> =
+            boostService?.activeBoostUserIds() ?: emptySet()
+
+    suspend fun getUserById(userId: String): User? {
+        val boosted = boostedUserIds()
+        return dbQuery {
+            Users.select { Users.id eq userId }
                 .mapNotNull {
                     User(
                             id = it[Users.id],
@@ -18,11 +27,12 @@ class UserService {
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
                             profileImageUrl = it[Users.profileImageUrl],
-                            isPremium = it[Users.isPremium],
+                            isPremium = it[Users.isPremium] || it[Users.id] in boosted,
                             fcmToken = it[Users.fcmToken]
                     )
                 }
                 .singleOrNull()
+        }
     }
 
     suspend fun updateBio(userId: String, bio: String): Boolean = dbQuery {
@@ -33,18 +43,21 @@ class UserService {
         Users.update({ Users.id eq userId }) { it[Users.profileImageUrl] = imageUrl } > 0
     }
 
-    suspend fun getAllUsers(): List<User> = dbQuery {
-        Users.select { Users.isDeleted eq false }.map {
-            User(
-                    id = it[Users.id],
-                    email = it[Users.email],
-                    gender = it[Users.gender],
-                    birthDate = it[Users.birthDate],
-                    bio = it[Users.bio],
-                    profileImageUrl = it[Users.profileImageUrl],
-                    isPremium = it[Users.isPremium],
-                    fcmToken = it[Users.fcmToken]
-            )
+    suspend fun getAllUsers(): List<User> {
+        val boosted = boostedUserIds()
+        return dbQuery {
+            Users.select { Users.isDeleted eq false }.map {
+                User(
+                        id = it[Users.id],
+                        email = it[Users.email],
+                        gender = it[Users.gender],
+                        birthDate = it[Users.birthDate],
+                        bio = it[Users.bio],
+                        profileImageUrl = it[Users.profileImageUrl],
+                        isPremium = it[Users.isPremium] || it[Users.id] in boosted,
+                        fcmToken = it[Users.fcmToken]
+                )
+            }
         }
     }
 
@@ -52,7 +65,9 @@ class UserService {
             minAge: Int? = null,
             maxAge: Int? = null,
             gender: String? = null
-    ): List<User> = dbQuery {
+    ): List<User> {
+        val boosted = boostedUserIds()
+        return dbQuery {
         val currentYear = java.time.LocalDate.now().year
 
         Users.select { Users.isDeleted eq false }
@@ -64,7 +79,7 @@ class UserService {
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
                             profileImageUrl = it[Users.profileImageUrl],
-                            isPremium = it[Users.isPremium],
+                            isPremium = it[Users.isPremium] || it[Users.id] in boosted,
                             fcmToken = it[Users.fcmToken]
                     )
                 }
@@ -92,6 +107,7 @@ class UserService {
 
                     genderMatch && ageMatch
                 }
+        }
     }
 
     suspend fun softDeleteUser(userId: String): Boolean = dbQuery {
