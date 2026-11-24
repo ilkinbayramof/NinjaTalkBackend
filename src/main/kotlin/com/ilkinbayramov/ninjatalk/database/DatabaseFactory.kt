@@ -27,6 +27,10 @@ object DatabaseFactory {
             exec("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user1_deleted_at BIGINT")
             exec("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user2_deleted_at BIGINT")
 
+            exec(
+                    "ALTER TABLE messages ADD COLUMN IF NOT EXISTS hidden_for_recipient BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+
             exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(20)")
             // Backfill accounts created before usernames existed. LEFT(..., 20) matters: an
             // e-mail prefix can be longer than the column. Already-deleted accounts are skipped:

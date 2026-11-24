@@ -29,7 +29,7 @@ class UserService(
     suspend fun getUserById(userId: String): User? {
         val boosted = boostedUserIds()
         return dbQuery {
-            Users.select { Users.id eq userId }
+            Users.select { (Users.id eq userId) and (Users.isDeleted eq false) }
                 .mapNotNull {
                     User(
                             id = it[Users.id],
@@ -133,11 +133,41 @@ class UserService(
         }
     }
 
-    suspend fun softDeleteUser(userId: String): Boolean = dbQuery {
-        Users.update({ Users.id eq userId }) {
-            it[Users.isDeleted] = true
-            it[Users.deletedAt] = System.currentTimeMillis()
-        } > 0
+    /**
+     * Deletes the account by stripping everything personal from it.
+     *
+     * The row itself has to stay, because messages reference it and dropping it would take the
+     * other participant's chat history with it. What is left behind is an id, the message text the
+     * two people exchanged, and an anon#### label - nothing that identifies the person. The e-mail
+     * is released so they can sign up again, and the new account is unrelated to this one.
+     */
+    suspend fun softDeleteUser(userId: String): Boolean {
+        // Read the image path before the row is wiped so the file can be removed from disk too
+        val imageUrl = dbQuery {
+            Users.select { Users.id eq userId }.singleOrNull()?.get(Users.profileImageUrl)
+        }
+
+        val updated = dbQuery {
+            Users.update({ Users.id eq userId }) {
+                it[Users.email] = "deleted_$userId@deleted.local"
+                // Random password: the account can never be signed into again, even by accident
+                it[Users.password] = PasswordHasher.hashPassword(UUID.randomUUID().toString())
+                it[Users.profileImageUrl] = null
+                it[Users.bio] = null
+                it[Users.gender] = ""
+                it[Users.birthDate] = ""
+                it[Users.fcmToken] = null
+                it[Users.isPremium] = false
+                it[Users.isDeleted] = true
+                it[Users.deletedAt] = System.currentTimeMillis()
+            } > 0
+        }
+
+        if (updated && imageUrl != null) {
+            fileService.deleteProfileImage(imageUrl)
+        }
+
+        return updated
     }
 
     suspend fun changePassword(

@@ -75,14 +75,22 @@ class ChatService(
                                 // Only messages newer than this user's deletion are visible to them
                                 val visibleMessages =
                                         Op.build {
-                                                if (deletedAt == null) {
-                                                        Messages.conversationId eq conversationId
-                                                } else {
-                                                        (Messages.conversationId eq
-                                                                conversationId) and
-                                                                (Messages.timestamp greater
-                                                                        deletedAt)
-                                                }
+                                                val window =
+                                                        if (deletedAt == null) {
+                                                                Messages.conversationId eq
+                                                                        conversationId
+                                                        } else {
+                                                                (Messages.conversationId eq
+                                                                        conversationId) and
+                                                                        (Messages.timestamp greater
+                                                                                deletedAt)
+                                                        }
+                                                // Messages sent while this user had the sender
+                                                // blocked stay invisible to them
+                                                window and
+                                                        ((Messages.senderId eq userId) or
+                                                                (Messages.hiddenForRecipient eq
+                                                                        false))
                                         }
                                 val otherUserId =
                                         if (row[Conversations.user1Id] == userId) {
@@ -103,6 +111,9 @@ class ChatService(
                                 val otherUser =
                                         Users.select { Users.id eq otherUserId }.singleOrNull()
 
+                                // The chosen name survives account deletion on purpose, so this
+                                // side of the chat never notices the account is gone. Never fall
+                                // back to the e-mail here: after deletion it is a placeholder.
                                 val displayName =
                                         if (firstMessage?.get(Messages.senderId) == userId) {
                                                 // User initiated - show the other person's name
@@ -162,12 +173,20 @@ class ChatService(
                         val deletedAt = deletedAtFor(conversation, userId)
                         val visibleMessages =
                                 Op.build {
-                                        if (deletedAt == null) {
-                                                Messages.conversationId eq conversationId
-                                        } else {
-                                                (Messages.conversationId eq conversationId) and
-                                                        (Messages.timestamp greater deletedAt)
-                                        }
+                                        val window =
+                                                if (deletedAt == null) {
+                                                        Messages.conversationId eq conversationId
+                                                } else {
+                                                        (Messages.conversationId eq
+                                                                conversationId) and
+                                                                (Messages.timestamp greater
+                                                                        deletedAt)
+                                                }
+                                        // Messages sent while this user had the sender blocked
+                                        // stay invisible to them
+                                        window and
+                                                ((Messages.senderId eq userId) or
+                                                        (Messages.hiddenForRecipient eq false))
                                 }
 
                         // Mark messages as read
@@ -209,10 +228,10 @@ class ChatService(
                                         conversation[Conversations.user1Id]
                                 }
 
-                        // Check if sender is blocked by receiver (silently fail)
-                        if (blockService.isBlocked(receiverId, senderId)) {
-                                return@dbQuery null
-                        }
+                        // Being blocked must look exactly like a normal send to the sender, so
+                        // the message is still stored and returned - it is just never shown to the
+                        // recipient and never triggers a notification.
+                        val blockedByReceiver = blockService.isBlocked(receiverId, senderId)
 
                         val messageId = UUID.randomUUID().toString()
                         val timestamp = System.currentTimeMillis()
@@ -224,6 +243,7 @@ class ChatService(
                                 it[this.content] = content
                                 it[this.timestamp] = timestamp
                                 it[isRead] = false
+                                it[hiddenForRecipient] = blockedByReceiver
                         }
 
                         // Update conversation's lastMessageAt
@@ -244,13 +264,16 @@ class ChatService(
                         // Get sender's anonymous name for the notification
                         val senderAnonymousName = getAnonymousName(senderId, conversationId)
 
-                        // Send FCM push notification to recipient
-                        notificationService?.sendMessageNotification(
-                                recipientId = receiverId,
-                                senderName = senderAnonymousName,
-                                messageContent = content,
-                                conversationId = conversationId
-                        )
+                        // Send FCM push notification to recipient - not when blocked, that
+                        // would defeat the block
+                        if (!blockedByReceiver) {
+                                notificationService?.sendMessageNotification(
+                                        recipientId = receiverId,
+                                        senderName = senderAnonymousName,
+                                        messageContent = content,
+                                        conversationId = conversationId
+                                )
+                        }
 
                         newMessage
                 }

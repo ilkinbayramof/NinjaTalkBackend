@@ -45,6 +45,10 @@ object Messages : Table() {
     val content = text("content")
     val timestamp = long("timestamp")
     val isRead = bool("is_read").default(false)
+    // Set when the recipient had blocked the sender. The message is stored so the sender's own
+    // history and the API response look exactly like a normal send, but the recipient never sees
+    // it. Unblocking later does not reveal messages sent while blocked.
+    val hiddenForRecipient = bool("hidden_for_recipient").default(false)
 
     override val primaryKey = PrimaryKey(id)
 }

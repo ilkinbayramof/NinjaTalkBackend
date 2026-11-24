@@ -67,6 +67,12 @@ class AuthService(private val jwtService: JwtService) {
                 return@dbQuery Result.failure(Exception("Invalid email or password"))
             }
 
+            // A deleted account must not come back to life. Newly deleted rows no longer carry
+            // their real e-mail, but ones deleted before that change still do.
+            if (user[Users.isDeleted]) {
+                return@dbQuery Result.failure(Exception("Invalid email or password"))
+            }
+
             val userId = user[Users.id]
             val token = jwtService.generateToken(userId, user[Users.email])
 

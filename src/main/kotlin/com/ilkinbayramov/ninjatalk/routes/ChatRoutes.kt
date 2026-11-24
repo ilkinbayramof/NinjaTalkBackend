@@ -90,8 +90,12 @@ fun Route.chatRoutes(chatService: ChatService) {
                                 if (message != null) {
                                         call.respond(HttpStatusCode.Created, message)
                                 } else {
-                                        // Silently succeed (user is blocked)
-                                        call.respond(HttpStatusCode.OK, mapOf("status" to "sent"))
+                                        // Only reachable when the conversation does not exist;
+                                        // being blocked now returns a normal Created response
+                                        call.respond(
+                                                HttpStatusCode.NotFound,
+                                                mapOf("error" to "Conversation not found")
+                                        )
                                 }
                         }
 
