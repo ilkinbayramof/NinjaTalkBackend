@@ -3,10 +3,16 @@ package com.ilkinbayramov.ninjatalk.services
 import com.ilkinbayramov.ninjatalk.database.DatabaseFactory.dbQuery
 import com.ilkinbayramov.ninjatalk.database.Users
 import com.ilkinbayramov.ninjatalk.models.User
+import com.ilkinbayramov.ninjatalk.utils.PasswordHasher
+import java.util.UUID
+import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 
-class UserService(private val boostService: BoostService? = null) {
+class UserService(
+        private val boostService: BoostService? = null,
+        private val fileService: FileService = FileService()
+) {
 
     /**
      * Users with a running boost count as premium for now. Splitting boost from a real premium
@@ -14,6 +20,11 @@ class UserService(private val boostService: BoostService? = null) {
      */
     private suspend fun boostedUserIds(): Set<String> =
             boostService?.activeBoostUserIds() ?: emptySet()
+
+    /** Accounts created before usernames existed fall back to the e-mail prefix. */
+    private fun displayNameOf(row: org.jetbrains.exposed.sql.ResultRow): String =
+            row[Users.displayName]
+                    ?: row[Users.email].substringBefore("@").replaceFirstChar { it.uppercase() }
 
     suspend fun getUserById(userId: String): User? {
         val boosted = boostedUserIds()
@@ -23,6 +34,7 @@ class UserService(private val boostService: BoostService? = null) {
                     User(
                             id = it[Users.id],
                             email = it[Users.email],
+                            displayName = displayNameOf(it),
                             gender = it[Users.gender],
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],
@@ -39,6 +51,15 @@ class UserService(private val boostService: BoostService? = null) {
         Users.update({ Users.id eq userId }) { it[Users.bio] = bio } > 0
     }
 
+    /** Null when the name was taken, otherwise whether the row was updated. */
+    suspend fun updateDisplayName(userId: String, name: String): Boolean? = dbQuery {
+        if (isUsernameTaken(name, excludeUserId = userId)) return@dbQuery null
+
+        Users.update({ (Users.id eq userId) and (Users.isDeleted eq false) }) {
+            it[Users.displayName] = name
+        } > 0
+    }
+
     suspend fun updateProfileImage(userId: String, imageUrl: String): Boolean = dbQuery {
         Users.update({ Users.id eq userId }) { it[Users.profileImageUrl] = imageUrl } > 0
     }
@@ -50,6 +71,7 @@ class UserService(private val boostService: BoostService? = null) {
                 User(
                         id = it[Users.id],
                         email = it[Users.email],
+                        displayName = displayNameOf(it),
                         gender = it[Users.gender],
                         birthDate = it[Users.birthDate],
                         bio = it[Users.bio],
@@ -75,6 +97,7 @@ class UserService(private val boostService: BoostService? = null) {
                     User(
                             id = it[Users.id],
                             email = it[Users.email],
+                            displayName = displayNameOf(it),
                             gender = it[Users.gender],
                             birthDate = it[Users.birthDate],
                             bio = it[Users.bio],

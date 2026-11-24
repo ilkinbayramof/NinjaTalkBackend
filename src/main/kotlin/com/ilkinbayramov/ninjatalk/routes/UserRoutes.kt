@@ -1,6 +1,8 @@
 package com.ilkinbayramov.ninjatalk.routes
 
 import com.ilkinbayramov.ninjatalk.models.requests.UpdateBioRequest
+import com.ilkinbayramov.ninjatalk.models.requests.UpdateUsernameRequest
+import com.ilkinbayramov.ninjatalk.services.AuthService
 import com.ilkinbayramov.ninjatalk.services.FileService
 import com.ilkinbayramov.ninjatalk.services.JwtService
 import com.ilkinbayramov.ninjatalk.services.UserService
@@ -118,6 +120,47 @@ fun Route.userRoutes(
                             HttpStatusCode.InternalServerError,
                             mapOf("error" to "Failed to update bio")
                     )
+                }
+            }
+
+            // Update username
+            put("/username") {
+                val principal = call.principal<JWTPrincipal>()
+                val userId =
+                        principal?.payload?.subject
+                                ?: return@put call.respond(HttpStatusCode.Unauthorized)
+
+                val request = call.receive<UpdateUsernameRequest>()
+                val username = request.username.trim()
+
+                if (username.length !in
+                                AuthService.USERNAME_MIN_LENGTH..AuthService.USERNAME_MAX_LENGTH
+                ) {
+                    return@put call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf(
+                                    "error" to
+                                            "Username must be between ${AuthService.USERNAME_MIN_LENGTH} and ${AuthService.USERNAME_MAX_LENGTH} characters"
+                            )
+                    )
+                }
+
+                when (userService.updateDisplayName(userId, username)) {
+                    null ->
+                            call.respond(
+                                    HttpStatusCode.Conflict,
+                                    mapOf("error" to "Username already taken")
+                            )
+                    true ->
+                            call.respond(
+                                    HttpStatusCode.OK,
+                                    mapOf("message" to "Username updated")
+                            )
+                    false ->
+                            call.respond(
+                                    HttpStatusCode.InternalServerError,
+                                    mapOf("error" to "Failed to update username")
+                            )
                 }
             }
 

@@ -13,8 +13,26 @@ import com.ilkinbayramov.ninjatalk.database.PasswordResetTokens
 
 class AuthService(private val jwtService: JwtService) {
 
+    companion object {
+        const val USERNAME_MIN_LENGTH = 2
+        const val USERNAME_MAX_LENGTH = 20
+    }
+
     suspend fun register(request: RegisterRequest): Result<AuthResponse> {
         return dbQuery {
+            val username = request.username.trim()
+            if (username.length !in USERNAME_MIN_LENGTH..USERNAME_MAX_LENGTH) {
+                return@dbQuery Result.failure(
+                        Exception(
+                                "Username must be between $USERNAME_MIN_LENGTH and $USERNAME_MAX_LENGTH characters"
+                        )
+                )
+            }
+
+            if (isUsernameTaken(username, excludeUserId = null)) {
+                return@dbQuery Result.failure(Exception("Username already taken"))
+            }
+
             val existingUser = Users.select { Users.email eq request.email }.singleOrNull()
             if (existingUser != null) {
                 return@dbQuery Result.failure(Exception("Email already registered"))
@@ -26,6 +44,7 @@ class AuthService(private val jwtService: JwtService) {
             Users.insert {
                 it[id] = userId
                 it[email] = request.email
+                it[displayName] = username
                 it[password] = hashedPassword
                 it[gender] = request.gender
                 it[birthDate] = request.birthDate

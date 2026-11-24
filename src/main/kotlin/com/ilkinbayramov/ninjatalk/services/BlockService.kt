@@ -82,6 +82,13 @@ class BlockService {
                             User(
                                     id = it[Users.id],
                                     email = it[Users.email],
+                                    displayName =
+                                            it[Users.displayName]
+                                                    ?: it[Users.email]
+                                                            .substringBefore("@")
+                                                            .replaceFirstChar { c ->
+                                                                c.uppercase()
+                                                            },
                                     gender = it[Users.gender],
                                     birthDate = it[Users.birthDate],
                                     bio = it[Users.bio],

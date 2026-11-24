@@ -6,3 +6,5 @@ import kotlinx.serialization.Serializable
 data class UpdateBioRequest(
     val bio: String
 )
+
+@Serializable data class UpdateUsernameRequest(val username: String)

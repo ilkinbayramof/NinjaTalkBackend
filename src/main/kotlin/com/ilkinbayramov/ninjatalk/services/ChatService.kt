@@ -100,17 +100,17 @@ class ChatService(
 
                                 // If current user sent first message, show real name
                                 // Otherwise show anonymous name
+                                val otherUser =
+                                        Users.select { Users.id eq otherUserId }.singleOrNull()
+
                                 val displayName =
                                         if (firstMessage?.get(Messages.senderId) == userId) {
-                                                // User initiated - show real name from Users table
-                                                val otherUser =
-                                                        Users.select { Users.id eq otherUserId }
-                                                                .singleOrNull()
-                                                otherUser
-                                                        ?.get(Users.email)
-                                                        ?.substringBefore("@")
-                                                        ?.replaceFirstChar { it.uppercase() }
-                                                        ?: "Unknown"
+                                                // User initiated - show the other person's name
+                                                otherUser?.get(Users.displayName)
+                                                        ?: getAnonymousName(
+                                                                otherUserId,
+                                                                conversationId
+                                                        )
                                         } else {
                                                 // User received - show anonymous name
                                                 getAnonymousName(otherUserId, conversationId)

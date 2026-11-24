@@ -27,6 +27,50 @@ object DatabaseFactory {
             exec("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user1_deleted_at BIGINT")
             exec("ALTER TABLE conversations ADD COLUMN IF NOT EXISTS user2_deleted_at BIGINT")
 
+            exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(20)")
+            // Backfill accounts created before usernames existed. LEFT(..., 20) matters: an
+            // e-mail prefix can be longer than the column. Already-deleted accounts are skipped:
+            // their e-mail is an internal placeholder and would surface as the chat name.
+            exec(
+                    """
+                UPDATE users
+                SET display_name = LEFT(
+                        UPPER(LEFT(SPLIT_PART(email, '@', 1), 1))
+                        || SUBSTRING(SPLIT_PART(email, '@', 1) FROM 2),
+                        20)
+                WHERE display_name IS NULL AND is_deleted = FALSE
+            """.trimIndent()
+            )
+
+            // The backfill can produce collisions (ilkin@a.com and ilkin@b.com both become
+            // "Ilkin"), so the losers get an id fragment appended before uniqueness is enforced.
+            exec(
+                    """
+                WITH ranked AS (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY LOWER(display_name) ORDER BY created_at
+                           ) AS rn
+                    FROM users
+                    WHERE is_deleted = FALSE AND display_name IS NOT NULL
+                )
+                UPDATE users u
+                SET display_name = LEFT(u.display_name, 13) || '_' || LEFT(u.id, 6)
+                FROM ranked r
+                WHERE u.id = r.id AND r.rn > 1
+            """.trimIndent()
+            )
+
+            // Case-insensitive and only among live accounts, so a deleted account does not keep
+            // its name out of circulation for everyone else.
+            exec(
+                    """
+                CREATE UNIQUE INDEX IF NOT EXISTS users_display_name_unique
+                ON users (LOWER(display_name))
+                WHERE is_deleted = FALSE
+            """.trimIndent()
+            )
+
             println("DATABASE: Tables created successfully")
             println("DATABASE: BlockedUsers table should now exist")
         }

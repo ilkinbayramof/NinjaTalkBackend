@@ -6,6 +6,10 @@ object Users : Table() {
     val id = varchar("id", 36)
     val email = varchar("email", 255).uniqueIndex()
     val password = varchar("password", 255)
+    // Chosen by the user at sign-up. Nullable so accounts created before this existed still
+    // work - those fall back to the e-mail prefix. Deliberately kept when the account is deleted
+    // so the other side of a chat keeps seeing the same name.
+    val displayName = varchar("display_name", 20).nullable()
     val gender = varchar("gender", 10)
     val birthDate = varchar("birth_date", 10)
     val bio = varchar("bio", 500).nullable()

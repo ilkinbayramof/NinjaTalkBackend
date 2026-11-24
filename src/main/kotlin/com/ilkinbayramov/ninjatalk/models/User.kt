@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 data class User(
         val id: String,
         val email: String,
+        /** The name other people see. Falls back to the e-mail prefix for older accounts. */
+        val displayName: String,
         val gender: String,
         val birthDate: String,
         val bio: String? = null,
